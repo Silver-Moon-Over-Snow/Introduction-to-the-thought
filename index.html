@@ -465,8 +465,19 @@
     .main-area { padding: 14px; }
     .card { padding: 18px; }
     .card-main-content .card { border-radius: var(--radius); border-right: 1px solid var(--border); }
-    .comment-panel { display: none !important; }
     .card-row { display: block; }
+    .comment-panel {
+      display: block;
+      width: 100%; min-width: 0;
+      margin-top: 12px; padding: 18px;
+      position: static;
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+    }
+    .comment-panel::before {
+      left: 14px; right: 14px; top: 0; bottom: auto;
+      width: auto; height: 3px;
+    }
     .header { padding: 18px; }
     .header h1 { font-size: 17px; }
   }
