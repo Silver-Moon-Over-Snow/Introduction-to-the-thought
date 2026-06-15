@@ -84,6 +84,18 @@
   }
   .sidebar-search input::placeholder { color: var(--text-light); }
   .sidebar-search input:focus { border-color: var(--primary); background: var(--card); box-shadow: 0 0 0 3px var(--primary-subtle); }
+  .source-filter {
+    display: flex; flex-wrap: wrap; gap: 6px;
+    padding: 0 14px 10px;
+  }
+  .source-filter-btn {
+    border: 1px solid var(--border); background: var(--bg); color: var(--text-muted);
+    border-radius: 999px; padding: 4px 9px; font-size: 11px; line-height: 1.2;
+    font-family: inherit; cursor: pointer; transition: all var(--transition);
+  }
+  .source-filter-btn:hover { border-color: var(--primary); color: var(--primary); background: var(--primary-subtle); }
+  .source-filter-btn.active { border-color: var(--primary); background: var(--primary); color: #fff; }
+  .source-filter-empty { padding: 20px 18px; color: var(--text-muted); font-size: 12px; line-height: 1.6; }
   .sidebar-list { flex: 1; overflow-y: auto; padding: 6px 0; position: relative; z-index: 1; }
   .sidebar-list::-webkit-scrollbar { width: 4px; }
   .sidebar-list::-webkit-scrollbar-thumb { background: transparent; border-radius: 4px; }
@@ -525,6 +537,9 @@
   [data-theme="dark"] .sidebar-overlay { background: rgba(0,0,0,0.6); }
   [data-theme="dark"] .sidebar-search input { background: #0b1120; color: var(--text); }
   [data-theme="dark"] .sidebar-search input:focus { background: var(--card); border-color: var(--primary); box-shadow: 0 0 0 3px var(--primary-subtle); }
+  [data-theme="dark"] .source-filter-btn { background: #0b1120; border-color: #1e293b; color: #94a3b8; }
+  [data-theme="dark"] .source-filter-btn:hover { background: var(--primary-subtle); border-color: var(--primary); color: #93c5fd; }
+  [data-theme="dark"] .source-filter-btn.active { background: var(--primary); border-color: var(--primary); color: #fff; }
   [data-theme="dark"] .header { background: linear-gradient(135deg, #0f2744, #1e3a5f); }
   [data-theme="dark"] .topic-badge { background: var(--primary-subtle); color: #93c5fd; }
   [data-theme="dark"] .tag-source { background: #422006; color: #fde68a; }
@@ -582,6 +597,7 @@
     <div class="sidebar-search">
       <input type="text" id="sidebarSearch" placeholder="搜索题目…" autocomplete="off">
     </div>
+    <div class="source-filter" id="sourceFilter" aria-label="按题目来源筛选"></div>
     <div class="sidebar-list" id="sidebarList"></div>
   </div>
 
@@ -905,7 +921,8 @@ const state = {
   dismissedIds: loadSet('xigai_dismissed'),
   userInputs: loadObj('xigai_texts'),  // { qIdx: user typed string }
   comments: loadObj('xigai_comments'),  // { qIdx: comment text }
-  view: 'main'
+  view: 'main',
+  sourceFilter: localStorage.getItem('xigai_source_filter') || 'all'
 };
 
 // Ensure arrays have correct length if new questions were added
@@ -1007,8 +1024,26 @@ function escapeHtml(value) {
   }[ch]));
 }
 
-function activeQuestionIds() {
-  return QUESTIONS.map((_, i) => i).filter(i => !state.dismissedIds.has(i));
+function getSourceTags() {
+  return [...new Set(QUESTIONS.map(q => q.tag).filter(Boolean))];
+}
+
+if (state.sourceFilter !== 'all' && !getSourceTags().includes(state.sourceFilter)) {
+  state.sourceFilter = 'all';
+}
+
+function sourceMatches(idx, filter = state.sourceFilter) {
+  return filter === 'all' || QUESTIONS[idx].tag === filter;
+}
+
+function activeQuestionIds(filter = state.sourceFilter) {
+  return QUESTIONS
+    .map((_, i) => i)
+    .filter(i => !state.dismissedIds.has(i) && sourceMatches(i, filter));
+}
+
+function allVisibleQuestionIds(filter = state.sourceFilter) {
+  return QUESTIONS.map((_, i) => i).filter(i => sourceMatches(i, filter));
 }
 
 function updateSaveSummary() {
@@ -1289,10 +1324,14 @@ function renderQuestion(qIdx) {
   if (commentInput) { commentInput.dataset.qidx = qIdx; }
 
   // Progress
-  const total = QUESTIONS.length;
+  const visibleIds = allVisibleQuestionIds();
+  const total = visibleIds.length || QUESTIONS.length;
+  const visiblePosition = visibleIds.indexOf(qIdx);
+  const shownPosition = visiblePosition >= 0 ? visiblePosition + 1 : qIdx + 1;
   const activeCount = activeQuestionIds().length;
-  el.progressText.textContent = `${qIdx + 1} / ${total}`;
-  el.progressFill.style.width = `${((qIdx + 1) / total) * 100}%`;
+  const sourceLabel = state.sourceFilter === 'all' ? '' : `${state.sourceFilter} · `;
+  el.progressText.textContent = `${sourceLabel}${shownPosition} / ${total}`;
+  el.progressFill.style.width = `${(shownPosition / total) * 100}%`;
   el.qid.textContent = `#${qIdx + 1}`;
 
   el.btnPrev.disabled = activeCount <= 1;
@@ -1325,12 +1364,13 @@ function showFeedback(isCorrect, q) {
 }
 
 function updateStats() {
-  el.statTotal.textContent = QUESTIONS.length;
-  el.statDone.textContent = state.answered.filter(Boolean).length;
-  el.statWrong.textContent = state.wrongIds.size;
-  el.statFav.textContent = state.favorites.size;
+  const visibleIds = allVisibleQuestionIds();
+  el.statTotal.textContent = visibleIds.length;
+  el.statDone.textContent = visibleIds.filter(id => state.answered[id]).length;
+  el.statWrong.textContent = [...state.wrongIds].filter(id => sourceMatches(id)).length;
+  el.statFav.textContent = [...state.favorites].filter(id => sourceMatches(id)).length;
   const dimEl = document.getElementById('statDimNum');
-  if (dimEl) dimEl.textContent = state.dismissedIds.size;
+  if (dimEl) dimEl.textContent = [...state.dismissedIds].filter(id => sourceMatches(id)).length;
 }
 
 // ========== ACTIONS ==========
@@ -1470,12 +1510,7 @@ function dismissQuestion() {
     return;
   }
   // Go to next active question
-  const total = QUESTIONS.length;
-  let next = activeIds[0];
-  for (let i = 0; i < total; i++) {
-    next = (qIdx + 1 + i) % total;
-    if (!state.dismissedIds.has(next)) break;
-  }
+  let next = activeIds.find(id => id > qIdx) ?? activeIds[0];
   state.current = next;
   state.checked = state.results[next] !== null;
   restoreQuestionState();
@@ -1485,35 +1520,25 @@ function dismissQuestion() {
 }
 
 function goPrev() {
-  let i = state.current;
-  const total = QUESTIONS.length;
-  for (let c = 0; c < total; c++) {
-    i--;
-    if (i < 0) i = total - 1;
-    if (!state.dismissedIds.has(i)) {
-      state.current = i;
-      state.checked = state.results[i] !== null;
-      restoreQuestionState();
-      renderQuestion(i);
-      return;
-    }
-  }
+  const ids = activeQuestionIds();
+  if (!ids.length) return;
+  const pos = ids.indexOf(state.current);
+  const nextIdx = pos > 0 ? ids[pos - 1] : ids[ids.length - 1];
+  state.current = nextIdx;
+  state.checked = state.results[nextIdx] !== null;
+  restoreQuestionState();
+  renderQuestion(nextIdx);
 }
 
 function goNext() {
-  let i = state.current;
-  const total = QUESTIONS.length;
-  for (let c = 0; c < total; c++) {
-    i++;
-    if (i >= total) i = 0;
-    if (!state.dismissedIds.has(i)) {
-      state.current = i;
-      state.checked = state.results[i] !== null;
-      restoreQuestionState();
-      renderQuestion(i);
-      return;
-    }
-  }
+  const ids = activeQuestionIds();
+  if (!ids.length) return;
+  const pos = ids.indexOf(state.current);
+  const nextIdx = pos >= 0 && pos < ids.length - 1 ? ids[pos + 1] : ids[0];
+  state.current = nextIdx;
+  state.checked = state.results[nextIdx] !== null;
+  restoreQuestionState();
+  renderQuestion(nextIdx);
 }
 
 function restoreQuestionState() {
@@ -1561,6 +1586,8 @@ function renderList(type) {
   else if (type === 'fav') { ids = [...state.favorites]; container = el.favList; emptyMsg = '📌 还没有收藏题目'; }
   else if (type === 'dismissed') { ids = [...state.dismissedIds]; container = el.dismissedList; emptyMsg = '🗑 还没有斩过题'; }
   else { ids = QUESTIONS.map((_, i) => i).filter(i => state.answered[i]); container = el.doneList; emptyMsg = '📝 还没有答过题'; }
+  ids = ids.filter(id => sourceMatches(id));
+  if (state.sourceFilter !== 'all') emptyMsg = `${state.sourceFilter}：${emptyMsg}`;
 
   if (ids.length === 0) {
     container.innerHTML = `<div class="empty-state"><div class="empty-cloud"></div><div class="icon">📭</div><p>${emptyMsg}</p></div>`;
@@ -1593,7 +1620,13 @@ function renderList(type) {
   container.innerHTML = html;
   container.querySelectorAll('.list-item').forEach(item => {
     item.addEventListener('click', () => {
-      state.current = parseInt(item.dataset.id);
+      const id = parseInt(item.dataset.id);
+      if (!sourceMatches(id)) {
+        state.sourceFilter = QUESTIONS[id].tag || 'all';
+        localStorage.setItem('xigai_source_filter', state.sourceFilter);
+        buildSidebar();
+      }
+      state.current = id;
       restoreQuestionState();
       switchView('main');
     });
@@ -1766,11 +1799,66 @@ el.restoreAll.addEventListener('click', () => {
 });
 
 // ========== SIDEBAR ==========
+function buildSourceFilter() {
+  const container = document.getElementById('sourceFilter');
+  if (!container) return;
+  const tags = getSourceTags();
+  const btn = (value, label, count) =>
+    `<button type="button" class="source-filter-btn${state.sourceFilter === value ? ' active' : ''}" data-source="${escapeHtml(value)}">${escapeHtml(label)} ${count}</button>`;
+  const allCount = allVisibleQuestionIds('all').length;
+  let html = btn('all', '全部', allCount);
+  tags.forEach(tag => {
+    html += btn(tag, tag, allVisibleQuestionIds(tag).length);
+  });
+  container.innerHTML = html;
+  container.querySelectorAll('.source-filter-btn').forEach(button => {
+    button.addEventListener('click', () => setSourceFilter(button.dataset.source || 'all'));
+  });
+}
+
+function setSourceFilter(filter) {
+  state.sourceFilter = filter || 'all';
+  localStorage.setItem('xigai_source_filter', state.sourceFilter);
+  const activeIds = activeQuestionIds();
+  buildSidebar();
+  if (activeIds.length) {
+    if (!sourceMatches(state.current) || state.dismissedIds.has(state.current)) {
+      state.current = activeIds[0];
+    }
+    restoreQuestionState();
+    switchView('main');
+  } else {
+    switchView('dismissed');
+    updateStats();
+    updateSaveSummary();
+  }
+}
+
+function applySidebarFilters() {
+  const input = document.getElementById('sidebarSearch');
+  const q = input ? input.value.trim().toLowerCase() : '';
+  document.querySelectorAll('.side-item').forEach(item => {
+    const idx = parseInt(item.dataset.idx);
+    const question = QUESTIONS[idx];
+    const text = item.querySelector('.s-text').textContent.toLowerCase();
+    const topic = question.topic.toLowerCase();
+    const tag = (question.tag || '').toLowerCase();
+    const matchText = !q || text.includes(q) || topic.includes(q) || tag.includes(q);
+    item.style.display = matchText ? '' : 'none';
+  });
+  document.querySelectorAll('.topic-group').forEach(g => {
+    const visible = [...g.querySelectorAll('.side-item')].some(item => item.style.display !== 'none');
+    g.style.display = visible ? '' : 'none';
+  });
+}
+
 function buildSidebar() {
   const container = document.getElementById('sidebarList');
+  buildSourceFilter();
   const groups = {};
   QUESTIONS.forEach((q, i) => {
     if (state.dismissedIds.has(i)) return; // skip dismissed
+    if (!sourceMatches(i)) return;
     if (!groups[q.topic]) groups[q.topic] = [];
     groups[q.topic].push({ idx: i, q });
   });
@@ -1785,7 +1873,10 @@ function buildSidebar() {
     });
     html += '</div>';
   }
-  container.innerHTML = html || '<div class="empty-state" style="padding:24px 18px"><p>所有题目都已被斩，恢复后可继续刷题</p></div>';
+  const emptyText = state.sourceFilter === 'all'
+    ? '所有题目都已被斩，恢复后可继续刷题'
+    : `“${escapeHtml(state.sourceFilter)}” 下没有可刷题目`;
+  container.innerHTML = html || `<div class="source-filter-empty">${emptyText}</div>`;
   container.querySelectorAll('.side-item').forEach(item => {
     item.addEventListener('click', () => {
       state.current = parseInt(item.dataset.idx);
@@ -1794,6 +1885,7 @@ function buildSidebar() {
       closeSidebar();
     });
   });
+  applySidebarFilters();
 }
 
 function updateSidebar() {
@@ -1821,20 +1913,7 @@ function updateSidebar() {
   }
 }
 
-document.getElementById('sidebarSearch').addEventListener('input', e => {
-  const q = e.target.value.trim().toLowerCase();
-  document.querySelectorAll('.side-item').forEach(item => {
-    const text = item.querySelector('.s-text').textContent.toLowerCase();
-    const idx = parseInt(item.dataset.idx);
-    const topic = QUESTIONS[idx].topic.toLowerCase();
-    const match = !q || text.includes(q) || topic.includes(q);
-    item.style.display = match ? '' : 'none';
-  });
-  document.querySelectorAll('.topic-group').forEach(g => {
-    const visible = [...g.querySelectorAll('.side-item')].some(item => item.style.display !== 'none');
-    g.style.display = visible ? '' : 'none';
-  });
-});
+document.getElementById('sidebarSearch').addEventListener('input', applySidebarFilters);
 
 function openSidebar() { document.getElementById('sidebar').classList.add('open'); document.getElementById('sidebarOverlay').classList.add('open'); }
 function closeSidebar() { document.getElementById('sidebar').classList.remove('open'); document.getElementById('sidebarOverlay').classList.remove('open'); }
