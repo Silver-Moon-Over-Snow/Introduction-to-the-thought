@@ -748,16 +748,7 @@
 // ========== DATA ==========
 const QUESTIONS = [
   { topic: "导论：时代课题",         question: "三个时代课题是什么？",          parts: ["", "；", "；", "。"], blanks: ["坚持和发展什么样的中国特色社会主义、怎样坚持和发展中国特色社会主义", "建设什么样的社会主义现代化强国、怎样建设社会主义现代化强国", "建设什么样的长期执政的马克思主义政党、怎样建设长期执政的马克思主义政党"], tag: 'csh重点', difficulty: '概念', points: 3 },
-  { topic: "导论：根本价值立场",     question: "根本价值立场是什么？",          parts: ["以", "为中心。"], blanks: ["人民"], tag: 'csh重点', difficulty: '概念', points: 1 },
-  { topic: "导论：根本动力",         question: "根本动力/源泉是什么？",         parts: ["", "。"], blanks: ["改革开放"], tag: 'csh重点', difficulty: '概念', points: 1 },
   { topic: "导论：五位一体",         question: "“五位一体”总体布局包括哪些方面？", parts: ["", "、", "、", "、", "、","。"], blanks: ["经济建设", "政治建设", "文化建设", "社会建设", "生态文明建设"], tag: 'csh重点', difficulty: '基础', points: 5 },
-  { topic: "导论：经济建设",         question: "经济建设的关键词是什么？",       parts: ["", "、", "。"], blanks: ["新发展理念", "新发展格局"], tag: 'csh重点', difficulty: '基础', points: 2 },
-  { topic: "导论：文化建设",         question: "文化建设的重点是什么？",         parts: ["", "；不断提升", "。"], blanks: ["第二个结合", "中华文化软实力和影响力"], tag: 'csh重点', difficulty: '概念', points: 2 },
-  { topic: "导论：社会建设",         question: "社会建设的关键词是什么？",       parts: ["", "等。"], blanks: ["源头治理"], tag: 'csh重点', difficulty: '概念', points: 1 },
-  { topic: "导论：生态文明建设",     question: "生态文明建设的关键词是什么？",   parts: ["", "。"], blanks: ["绿水青山就是金山银山"], tag: 'csh重点', difficulty: '概念', points: 1 },
-  { topic: "导论：外交",             question: "外交领域的重要理念是什么？",     parts: ["", "。"], blanks: ["人类命运共同体"], tag: 'csh重点', difficulty: '概念', points: 1 },
-  { topic: "导论：国防安全",         question: "国防安全领域的重要理念是什么？", parts: ["", "。"], blanks: ["总体国家安全观"], tag: 'csh重点', difficulty: '概念', points: 1 },
-  { topic: "导论：党的建设",         question: '党的建设中的“第二个答案”是什么？', parts: ["", "是跳出历史周期率的第二个答案。"], blanks: ["党的自我革命"], tag: 'csh重点', difficulty: '概念', points: 1 },
   { topic: "世界观和方法论",         question: "“六个必须坚持”是什么？", parts: ["必须坚持", "、必须坚持", "、必须坚持", "、必须坚持", "、必须坚持", "、必须坚持", "。"], blanks: ["人民至上", "自信自立", "守正创新", "问题导向", "系统观念", "胸怀天下"], tag: 'csh重点', difficulty: '困难', points: 6 },
   { topic: "四个自信",               question: "“四个自信”是什么？",             parts: ["", "、", "、", "、", "。"], blanks: ["道路自信", "理论自信", "制度自信", "文化自信"], tag: 'csh重点', difficulty: '基础', points: 4 },
   { topic: "新时代",                 question: "为什么说中国特色社会主义进入了新时代？", parts: ["中国特色社会主义进入新时代，是我国", "发生新变化的反映；我国发展站在新的历史起点上，社会主要矛盾由人民日益增长的物质文化需要同落后的社会生产之间的矛盾，转化为人民日益增长的美好生活需要和", "之间的矛盾。"], blanks: ["社会主要矛盾", "不平衡不充分的发展"], tag: 'csh重点', difficulty: '基础', points: 2 },
@@ -767,8 +758,6 @@ const QUESTIONS = [
   { topic: "中国式现代化",           question: "中国式现代化的世界意义是什么？", parts: ["中国式现代化创造了", "。"], blanks: ["人类文明新形态"], tag: 'csh重点', difficulty: '概念', points: 1 },
   { topic: "中国式现代化",           question: "推进中国式现代化需要牢牢把握哪些重大原则？", parts: ["", "；", "；", "；", "；", "。"], blanks: ["坚持党的全面领导", "坚持中国特色社会主义道路", "坚持以人民为中心", "坚持深化改革开放", "坚持发扬斗争精神"], tag: 'csh重点', difficulty: '困难', points: 5 },
   { topic: "中国式现代化",           question: "推进中国式现代化需要正确处理哪些重大关系？", parts: ["", "；", "；", "；", "；", "；", "。"], blanks: ["顶层设计与实践探索", "战略与策略", "守正与创新", "效率与公平", "活力与秩序", "自立自强与对外开放"], tag: 'csh重点', difficulty: '困难', points: 6 },
-  { topic: "党的全面领导",           question: "中国特色社会主义最本质的特征是什么？", parts: ["", "。"], blanks: ["中国共产党领导"], tag: 'csh重点', difficulty: '概念', points: 1 },
-  { topic: "党的全面领导",           question: "中国特色社会主义制度的最大优势是什么？", parts: ["", "。"], blanks: ["中国共产党领导"], tag: 'csh重点', difficulty: '概念', points: 1 },
   { topic: "党的全面领导",           question: "党的领导有什么特点？",          parts: ["党的领导是", "、", "、", "。"], blanks: ["全面的", "系统的", "整体的"], tag: 'csh重点', difficulty: '基础', points: 3 },
   { topic: "共同富裕",               question: "扎实推进共同富裕要坚持什么思路？", parts: ["", "；", "；", "；", "。"], blanks: ["鼓励勤劳致富、创新致富", "坚持基本经济制度", "坚持尽力而为、量力而行", "坚持循序渐进"], tag: 'csh重点', difficulty: '困难', points: 4 },
   { topic: "共同富裕",               question: "推进共同富裕要如何完善分配制度？", parts: ["构建", "、再分配、三次分配协调配套的基础性制度安排。"], blanks: ["初次分配"], tag: 'csh重点', difficulty: '概念', points: 1 },
@@ -786,7 +775,6 @@ const QUESTIONS = [
   { topic: "发展和安全",             question: "如何理解发展和安全的关系？",     parts: ["发展和安全是两件大事。发展解决的是", "问题，是推动国家和民族赓续绵延的根本支撑；安全解决的是", "问题，是确保国家和民族行稳致远的坚强基石。"], blanks: ["动力", "保障"], tag: 'csh重点', difficulty: '基础', points: 2 },
   { topic: "人类命运共同体",         question: "构建人类命运共同体的目标是什么？", parts: ["建设", "、", "、", "、", "、", "的世界。"], blanks: ["持久和平", "普遍安全", "共同繁荣", "开放包容", "清洁美丽"], tag: 'csh重点', difficulty: '基础', points: 5 },
   { topic: "全球倡议",               question: "四个全球倡议是什么？",           parts: ["", "、", "、", "、", "。"], blanks: ["全球发展倡议", "全球安全倡议", "全球文明倡议", "全球治理倡议"], tag: 'csh重点', difficulty: '基础', points: 4 },
-  ,
   { topic: "四个之问",               question: "“四个之问”是什么？",     parts: ["", "、", "、", "、", "。"], blanks: ["中国之问", "世界之问", "人民之问", "时代之问"], tag: 'csh重点', difficulty: '概念', points: 4 },
   { topic: "跳出历史周期率",         question: "跳出历史周期率的第一个答案是什么？", parts: ["毛主席在“窑洞对”中提出：", "。"], blanks: ["人民监督"], tag: 'csh重点', difficulty: '概念', points: 1 },
   { topic: "跳出历史周期率",         question: "跳出历史周期率的第二个答案是什么？", parts: ["习近平提出：", "。"], blanks: ["党的自我革命"], tag: 'csh重点', difficulty: '概念', points: 1 }
