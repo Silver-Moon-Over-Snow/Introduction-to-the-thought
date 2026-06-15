@@ -14,6 +14,12 @@
 
 ## 使用方法
 
+在线访问：
+
+```text
+https://silver-moon-over-snow.github.io/Introduction-to-the-thought/
+```
+
 直接用浏览器打开：
 
 ```text
