@@ -1,0 +1,8 @@
+.codegraph/
+*.db
+*.db-shm
+*.db-wal
+*.pid
+*.log
+习概刷题进度-*.json
+*render-check*.png
