@@ -279,10 +279,13 @@
   .tag-difficulty { background: var(--primary-light); color: var(--primary); }
   .tag-difficulty.hard { background: #fce7f3; color: #9d174d; }
   .tag-difficulty.easy { background: #d1fae5; color: #065f46; }
+  .tag-mnemonic { background: #f0f9ff; color: #0369a1; max-width: 100%; white-space: normal; line-height: 1.45; }
   .tag-badge.side-tag { padding: 1px 7px; flex-shrink: 0; font-size: 9px; }
+  .tag-badge.side-mnemonic { flex-basis: 100%; max-width: 100%; white-space: normal; line-height: 1.35; }
 
   .question-text { font-size: 17px; font-weight: 600; line-height: 1.7; margin-bottom: 20px; color: var(--text); }
   .question-meta { display: flex; flex-wrap: wrap; gap: 6px; margin: -12px 0 20px; }
+  .question-meta .tag-mnemonic { flex-basis: 100%; width: fit-content; max-width: 100%; }
 
   .step-indicator {
     display: flex; align-items: center; gap: 8px; margin-bottom: 18px;
@@ -499,6 +502,10 @@
     .main-area { padding: 14px; }
     .top-controls { padding-left: 42px; }
     .card { padding: 18px; }
+    .question-meta { gap: 5px; margin-bottom: 16px; }
+    .question-meta .tag-mnemonic { width: 100%; font-size: 11px; padding: 6px 10px; }
+    .side-item .s-meta { gap: 3px; }
+    .tag-badge.side-mnemonic { display: block; font-size: 9px; padding: 2px 6px; }
     .card-main-content .card { border-radius: var(--radius); border-right: 1px solid var(--border); }
     .card-row { display: block; }
     .comment-panel {
@@ -570,6 +577,7 @@
   [data-theme="dark"] .tag-difficulty { background: var(--primary-light); color: #93c5fd; }
   [data-theme="dark"] .tag-difficulty.hard { background: #4a0e2e; color: #f9a8d4; }
   [data-theme="dark"] .tag-difficulty.easy { background: #064e3b; color: #6ee7b7; }
+  [data-theme="dark"] .tag-mnemonic { background: #082f49; color: #7dd3fc; }
   [data-theme="dark"] .progress-track { background: #1e293b; }
   [data-theme="dark"] .step-indicator { background: #0b1120; }
   [data-theme="dark"] .step-dot .circle { background: #475569; }
@@ -710,6 +718,7 @@
         <div class="question-meta" id="questionMeta">
           <span class="tag-badge tag-source" id="sourceTag" style="display:none"></span>
           <span class="tag-badge tag-difficulty" id="diffTag" style="display:none"></span>
+          <span class="tag-badge tag-mnemonic" id="mnemonicTag" style="display:none"></span>
         </div>
 
 
@@ -1199,6 +1208,53 @@ function saveComment(qIdx) {
   el.btnComment.style.borderColor = state.comments[qIdx] ? '#2563eb' : '#94a3b8';
 }
 
+function compactMemoryPart(text) {
+  let s = String(text || '').trim();
+  s = s.replace(/[“”"《》〈〉（）()]/g, '');
+  s = s.replace(/中国特色社会主义/g, '中特社');
+  s = s.replace(/社会主义现代化/g, '现代化');
+  s = s.replace(/马克思主义/g, '马克思');
+  s = s.replace(/全过程人民民主/g, '全过程民主');
+  s = s.replace(/人类命运共同体/g, '命运共同体');
+  s = s.replace(/中国共产党/g, '党');
+  s = s.replace(/、/g, '，');
+  const firstChunk = s.split(/[，,；;。]/).find(Boolean) || s;
+  s = firstChunk
+    .replace(/什么样的|怎样|如何|为什么/g, '')
+    .replace(/^(坚持和发展|坚持|建设|推进|全面|加快|不断|正确处理|构建|维护|促进|发展|实现|完善|健全|加强|弘扬|贯彻|开辟|推动|创造|形成|落实)/, '');
+  s = s.replace(/^全(?=涵盖|覆盖|链条|贯通)/, '');
+  if (s.length < 2) s = firstChunk;
+  return s.length > 6 ? s.slice(0, 4) : s;
+}
+
+function getMnemonic(q, compact = false) {
+  if (q.mnemonic) return q.mnemonic;
+  const parts = q.blanks.map(compactMemoryPart).filter(Boolean);
+  if (!parts.length) return '';
+  const hasLong = q.blanks.some(b => String(b).length > 18);
+  const initials = parts.map(p => p[0]).join('');
+  if (compact) {
+    const text = hasLong ? `抓手：${parts.slice(0, 3).join('/')}` : `口诀：${initials}`;
+    return text.length > 34 ? text.slice(0, 33) + '…' : text;
+  }
+  if (q.blanks.length === 1) return `抓手：${parts[0]}`;
+  if (q.blanks.length > 8) return `抓手：${parts.slice(0, 8).join(' / ')}…`;
+  if (hasLong) return `抓手：${parts.join(' / ')}`;
+  return `口诀：${initials}（${parts.join(' / ')}）`;
+}
+
+function getReciteInfo(q) {
+  const lengths = q.blanks.map(b => String(b).length);
+  const total = lengths.reduce((sum, n) => sum + n, 0);
+  const max = Math.max(...lengths, 0);
+  const points = q.points || q.blanks.length;
+  const hard = total > 95 || max > 30 || points >= 8 || (points >= 5 && total > 70) || (points >= 4 && max > 22);
+  if (hard) return { label: '背诵难', cls: 'hard' };
+  const medium = total > 30 || max > 12 || points >= 4;
+  if (medium) return { label: '背诵中', cls: '' };
+  return { label: '背诵易', cls: 'easy' };
+}
+
 function updateStudyModeToggle() {
   if (!el.modeMemory || !el.modeDictation) return;
   el.modeMemory.classList.toggle('active', state.studyMode === 'memory');
@@ -1224,15 +1280,17 @@ function renderQuestion(qIdx) {
   // Update tags
   const srcTag = document.getElementById('sourceTag');
   const diffTagEl = document.getElementById('diffTag');
+  const mnemonicTag = document.getElementById('mnemonicTag');
   if (q.tag) { srcTag.textContent = q.tag; srcTag.style.display = 'inline-block'; }
   else { srcTag.style.display = 'none'; }
-  if (q.difficulty) {
-    diffTagEl.textContent = q.difficulty;
-    diffTagEl.className = 'tag-badge tag-difficulty';
-    if (q.difficulty === '困难') diffTagEl.classList.add('hard');
-    else if (q.difficulty === '基础') diffTagEl.classList.add('easy');
-    diffTagEl.style.display = 'inline-block';
-  } else { diffTagEl.style.display = 'none'; }
+  const recite = getReciteInfo(q);
+  diffTagEl.textContent = recite.label;
+  diffTagEl.className = 'tag-badge tag-difficulty';
+  if (recite.cls) diffTagEl.classList.add(recite.cls);
+  diffTagEl.style.display = 'inline-block';
+  const mnemonic = getMnemonic(q);
+  if (mnemonic) { mnemonicTag.textContent = mnemonic; mnemonicTag.style.display = 'inline-block'; }
+  else { mnemonicTag.style.display = 'none'; }
   el.question.textContent = q.question;
   el.question.textContent = q.question;
 
@@ -1683,9 +1741,11 @@ function renderList(type) {
         ? '<span class="tag tag-correct">🎯 要点✓</span>'
         : '<span class="tag tag-partial">🎯 要点✗</span>';
     }
-    const diffCls = q.difficulty === '困难' ? 'hard' : q.difficulty === '基础' ? 'easy' : '';
+    const recite = getReciteInfo(q);
+    const mnemonic = getMnemonic(q);
     const tagHtml = (q.tag ? `<span class="tag-badge tag-source" style="margin-bottom:0;margin-top:-4px;">${escapeHtml(q.tag)}</span>` : '') +
-                    (q.difficulty ? `<span class="tag-badge tag-difficulty ${diffCls}" style="margin-bottom:0;margin-top:-4px;">${escapeHtml(q.difficulty)}</span>` : '');
+                    `<span class="tag-badge tag-difficulty ${recite.cls}" style="margin-bottom:0;margin-top:-4px;">${escapeHtml(recite.label)}</span>` +
+                    (mnemonic ? `<span class="tag-badge tag-mnemonic" style="margin-bottom:0;margin-top:-4px;">${escapeHtml(mnemonic)}</span>` : '');
     html += `<div class="list-item" data-id="${id}"><div class="topic">${escapeHtml(q.topic)}</div><div style="display:flex;gap:4px;flex-wrap:wrap;margin:2px 0 4px;">${tagHtml}</div><div class="q">${escapeHtml(q.question)}</div><div class="a">${escapeHtml(q.answer)}</div><div class="meta">${tags}</div></div>`;
   });
   container.innerHTML = html;
@@ -1939,9 +1999,12 @@ function buildSidebar() {
   for (const [topic, items] of Object.entries(groups)) {
     html += `<div class="topic-group"><div class="topic-group-title">${escapeHtml(topic)}</div>`;
     items.forEach(({ idx, q }) => {
-      const diffCls = q.difficulty === '困难' ? ' hard' : q.difficulty === '基础' ? ' easy' : '';
+      const recite = getReciteInfo(q);
+      const diffCls = recite.cls ? ` ${recite.cls}` : '';
+      const mnemonic = getMnemonic(q, true);
       const tagHtml = (q.tag ? `<span class="tag-badge tag-source side-tag">${escapeHtml(q.tag)}</span>` : '') +
-                      (q.difficulty ? `<span class="tag-badge tag-difficulty side-tag${diffCls}">${escapeHtml(q.difficulty)}</span>` : '');
+                      `<span class="tag-badge tag-difficulty side-tag${diffCls}">${escapeHtml(recite.label)}</span>` +
+                      (mnemonic ? `<span class="tag-badge tag-mnemonic side-tag side-mnemonic">${escapeHtml(mnemonic)}</span>` : '');
       html += `<div class="side-item" data-idx="${idx}"><span class="s-num">#${idx+1}</span><span class="s-body"><span class="s-text">${escapeHtml(q.question)}</span><span class="s-meta">${tagHtml}</span></span><span class="s-dot pending" id="sdot_${idx}"></span></div>`;
     });
     html += '</div>';
