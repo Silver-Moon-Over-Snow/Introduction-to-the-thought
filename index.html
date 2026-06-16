@@ -182,6 +182,25 @@
   }
   .theme-btn:hover { background: rgba(255,255,255,.22); border-color: rgba(255,255,255,.35); transform: scale(1.08); }
 
+  .top-controls {
+    display: flex; align-items: center; justify-content: flex-start;
+    margin: 0 0 12px; min-height: 32px;
+  }
+  .mode-toggle {
+    display: inline-flex; align-items: center; gap: 2px;
+    background: var(--card); border: 1px solid var(--border);
+    border-radius: var(--radius-xs); padding: 3px;
+    box-shadow: var(--shadow);
+  }
+  .mode-btn {
+    border: 0; background: transparent; color: var(--text-muted);
+    border-radius: 5px; padding: 6px 12px; font-size: 12px; font-weight: 700;
+    font-family: inherit; cursor: pointer; transition: all var(--transition);
+    line-height: 1.2;
+  }
+  .mode-btn:hover { color: var(--primary); background: var(--primary-subtle); }
+  .mode-btn.active { color: #fff; background: var(--primary); box-shadow: 0 1px 4px rgba(37,99,235,.22); }
+
   /* Stats bar */
   .stats { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 18px; }
   .stat {
@@ -478,6 +497,7 @@
     .sidebar-toggle { display: block; }
     .sidebar-close { display: block; }
     .main-area { padding: 14px; }
+    .top-controls { padding-left: 42px; }
     .card { padding: 18px; }
     .card-main-content .card { border-radius: var(--radius); border-right: 1px solid var(--border); }
     .card-row { display: block; }
@@ -541,6 +561,10 @@
   [data-theme="dark"] .source-filter-btn:hover { background: var(--primary-subtle); border-color: var(--primary); color: #93c5fd; }
   [data-theme="dark"] .source-filter-btn.active { background: var(--primary); border-color: var(--primary); color: #fff; }
   [data-theme="dark"] .header { background: linear-gradient(135deg, #0f2744, #1e3a5f); }
+  [data-theme="dark"] .mode-toggle { background: var(--card); border-color: #1e293b; }
+  [data-theme="dark"] .mode-btn { color: #94a3b8; }
+  [data-theme="dark"] .mode-btn:hover { color: #93c5fd; background: var(--primary-subtle); }
+  [data-theme="dark"] .mode-btn.active { color: #fff; background: var(--primary); }
   [data-theme="dark"] .topic-badge { background: var(--primary-subtle); color: #93c5fd; }
   [data-theme="dark"] .tag-source { background: #422006; color: #fde68a; }
   [data-theme="dark"] .tag-difficulty { background: var(--primary-light); color: #93c5fd; }
@@ -603,6 +627,13 @@
 
   <!-- ===== MAIN ===== -->
   <div class="main-area">
+
+    <div class="top-controls">
+      <div class="mode-toggle" id="studyModeToggle" aria-label="选择学习模式">
+        <button class="mode-btn" id="modeMemory" type="button" data-mode="memory">记忆</button>
+        <button class="mode-btn" id="modeDictation" type="button" data-mode="dictation">默写</button>
+      </div>
+    </div>
 
     <div class="header">
       <div class="header-cloud"></div>
@@ -683,7 +714,7 @@
 
 
         <!-- Step indicator -->
-        <div class="step-indicator">
+        <div class="step-indicator" id="stepIndicator">
           <span class="step-dot" id="step1">
             <span class="circle-wrap"><span class="circle">1</span><span class="circle-ring"></span></span> 判断要点数
           </span>
@@ -922,8 +953,13 @@ const state = {
   userInputs: loadObj('xigai_texts'),  // { qIdx: user typed string }
   comments: loadObj('xigai_comments'),  // { qIdx: comment text }
   view: 'main',
-  sourceFilter: localStorage.getItem('xigai_source_filter') || 'all'
+  sourceFilter: localStorage.getItem('xigai_source_filter') || 'all',
+  studyMode: localStorage.getItem('xigai_study_mode') || 'dictation'
 };
+
+if (state.studyMode !== 'memory' && state.studyMode !== 'dictation') {
+  state.studyMode = 'dictation';
+}
 
 // Ensure arrays have correct length if new questions were added
 while (state.answered.length < QUESTIONS.length) state.answered.push(false);
@@ -956,6 +992,7 @@ const el = {
   clearWrong: $('clearWrong'), clearFav: $('clearFav'), restoreAll: $('restoreAll'),
   pointGuess: $('pointGuess'), pointInput: $('pointInput'), btnPoints: $('btnConfirmPoints'), pointFeedback: $('pointFeedback'),
   step1: $('step1'), step2: $('step2'), step3: $('step3'),
+  stepIndicator: $('stepIndicator'), modeMemory: $('modeMemory'), modeDictation: $('modeDictation'),
   utilitySummary: $('utilitySummary'), btnExport: $('btnExport'), btnImport: $('btnImport'), importFile: $('importFile'),
 };
 
@@ -1162,9 +1199,26 @@ function saveComment(qIdx) {
   el.btnComment.style.borderColor = state.comments[qIdx] ? '#2563eb' : '#94a3b8';
 }
 
+function updateStudyModeToggle() {
+  if (!el.modeMemory || !el.modeDictation) return;
+  el.modeMemory.classList.toggle('active', state.studyMode === 'memory');
+  el.modeDictation.classList.toggle('active', state.studyMode === 'dictation');
+}
+
+function setStudyMode(mode) {
+  if (mode !== 'memory' && mode !== 'dictation') return;
+  state.studyMode = mode;
+  localStorage.setItem('xigai_study_mode', mode);
+  updateStudyModeToggle();
+  restoreQuestionState();
+  renderQuestion(state.current);
+}
+
 function renderQuestion(qIdx) {
   const q = QUESTIONS[qIdx];
   if (!q) return;
+  const isMemoryMode = state.studyMode === 'memory';
+  updateStudyModeToggle();
 
   el.topic.textContent = q.topic;
   // Update tags
@@ -1181,6 +1235,8 @@ function renderQuestion(qIdx) {
   } else { diffTagEl.style.display = 'none'; }
   el.question.textContent = q.question;
   el.question.textContent = q.question;
+
+  if (el.stepIndicator) el.stepIndicator.style.display = isMemoryMode ? 'none' : '';
 
   // Determine phases
   // Skip point-guess step when the number is obvious
@@ -1199,8 +1255,23 @@ function renderQuestion(qIdx) {
   el.step2.className = 'step-dot' + (phase >= 2 ? (phase > 2 ? ' done' : ' active') : '');
   el.step3.className = 'step-dot' + (phase === 3 ? ' active' : '');
 
-  // Phase 1: Point guess
-  if (phase === 1) {
+  // Memory mode: read the answer directly without recording answer progress.
+  if (isMemoryMode) {
+    el.pointGuess.style.display = 'none';
+    el.answerArea.style.display = 'block';
+    el.answerArea.innerHTML = `<div class="correct-answer-box show" id="correctAnswerBox">
+      <span class="label">参考答案</span>
+      <div>${escapeHtml(q.answer)}</div>
+    </div>`;
+    el.btnCheck.style.display = 'none';
+    el.btnShow.style.display = 'none';
+    el.btnClear.style.display = 'none';
+    el.btnFav.style.display = 'inline-flex';
+    el.btnDim.style.display = 'inline-flex';
+    el.btnDim.innerHTML = state.dismissedIds.has(qIdx) ? '↩ 恢复' : '🗑 斩题';
+    el.feedback.classList.remove('show', 'correct', 'wrong');
+    el.feedback.style.display = 'none';
+  } else if (phase === 1) {
     el.pointGuess.style.display = 'block';
     el.pointFeedback.classList.remove('show', 'correct', 'wrong');
     el.pointInput.value = '';
@@ -1338,7 +1409,7 @@ function renderQuestion(qIdx) {
   el.btnNext.disabled = activeCount <= 1;
 
   // Feedback
-  if (state.checked && state.results[qIdx] !== null) {
+  if (!isMemoryMode && state.checked && state.results[qIdx] !== null) {
     showFeedback(state.results[qIdx], q);
   } else {
     el.feedback.classList.remove('show', 'correct', 'wrong');
@@ -1707,6 +1778,8 @@ document.addEventListener('input', e => {
 
 el.btnPrev.addEventListener('click', goPrev);
 el.btnNext.addEventListener('click', goNext);
+el.modeMemory?.addEventListener('click', () => setStudyMode('memory'));
+el.modeDictation?.addEventListener('click', () => setStudyMode('dictation'));
 
 // Keyboard: Enter → 确认/核对/下一题；Shift+Enter → 换行
 document.addEventListener('keydown', e => {
