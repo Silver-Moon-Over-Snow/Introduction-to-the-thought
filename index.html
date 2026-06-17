@@ -2394,23 +2394,53 @@ el.subjectShigang?.addEventListener('click', () => setSubjectFilter('史纲'));
 el.modeMemory?.addEventListener('click', () => setStudyMode('memory'));
 el.modeDictation?.addEventListener('click', () => setStudyMode('dictation'));
 
+function moveBetweenPointInputs(currentId, delta) {
+  const idx = parseInt(String(currentId).split('_')[1]);
+  if (Number.isNaN(idx)) return false;
+  const next = document.getElementById('pointInput_' + (idx + delta));
+  if (!next) return true;
+  next.focus();
+  if (typeof next.setSelectionRange === 'function') {
+    const end = next.value.length;
+    next.setSelectionRange(end, end);
+  }
+  return true;
+}
+
 // Keyboard: Enter → 确认/核对/下一题；Shift+Enter → 换行
 document.addEventListener('keydown', e => {
-  // Arrow keys always work regardless of focus
-  if (e.key === 'ArrowLeft') { e.preventDefault(); goPrev(); return; }
-  if (e.key === 'ArrowRight') { e.preventDefault(); goNext(); return; }
+  const targetTag = e.target.tagName;
+  const targetId = e.target.id || '';
+
+  if (!state.checked && targetId.startsWith('pointInput_')) {
+    if (e.key === 'ArrowLeft') {
+      e.preventDefault();
+      moveBetweenPointInputs(targetId, -1);
+      return;
+    }
+    if (e.key === 'ArrowRight') {
+      e.preventDefault();
+      moveBetweenPointInputs(targetId, 1);
+      return;
+    }
+  }
+
+  if (targetTag !== 'TEXTAREA' && targetTag !== 'INPUT') {
+    if (e.key === 'ArrowLeft') { e.preventDefault(); goPrev(); return; }
+    if (e.key === 'ArrowRight') { e.preventDefault(); goNext(); return; }
+  }
 
   // Shortcut keys: S=收藏, C=评论 (no modifier keys, not while typing)
   if (!e.ctrlKey && !e.metaKey && !e.altKey) {
     if (e.key === 's' || e.key === 'S') {
-      if (e.target.tagName !== 'TEXTAREA' && e.target.tagName !== 'INPUT') {
+      if (targetTag !== 'TEXTAREA' && targetTag !== 'INPUT') {
         toggleFav();
         e.preventDefault();
       }
       return;
     }
     if (e.key === 'c' || e.key === 'C') {
-      if (e.target.tagName !== 'TEXTAREA' && e.target.tagName !== 'INPUT') {
+      if (targetTag !== 'TEXTAREA' && targetTag !== 'INPUT') {
         el.btnComment.click();
         e.preventDefault();
       }
@@ -2418,10 +2448,10 @@ document.addEventListener('keydown', e => {
     }
   }
 
-  if (e.target.tagName === 'TEXTAREA') {
+  if (targetTag === 'TEXTAREA') {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
-      const id = e.target.id;
+      const id = targetId;
       if (id && id.startsWith('pointInput_')) {
         const idx = parseInt(id.split('_')[1]);
         const next = document.getElementById('pointInput_' + (idx + 1));
@@ -2435,7 +2465,7 @@ document.addEventListener('keydown', e => {
     }
     return;
   }
-  if (e.target.tagName === 'INPUT') {
+  if (targetTag === 'INPUT') {
     if (e.key === 'Enter') {
       e.preventDefault();
       confirmPoints();
