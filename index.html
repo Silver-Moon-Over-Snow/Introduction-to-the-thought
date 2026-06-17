@@ -2124,6 +2124,7 @@ function clearAnswer() {
   const qIdx = state.current;
   const q = QUESTIONS[qIdx];
   state.checked = false;
+  state.answered[qIdx] = false;
   state.results[qIdx] = null;
   delete state.userInputs[qIdx];
   state.wrongIds.delete(qIdx);
@@ -2137,6 +2138,7 @@ function clearAnswer() {
     state.userPoints[qIdx] = q.points;
   }
   saveState();
+  buildSidebar();
   renderQuestion(qIdx);
   // Focus first point
   const first = document.getElementById('pointInput_0');
