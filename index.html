@@ -1687,8 +1687,8 @@ function getMnemonic(q, compact = false) {
 
 function canShowMnemonic(qIdx, allowCurrentChecked = false) {
   return state.studyMode === 'memory' ||
-         state.results[qIdx] !== null ||
-         (allowCurrentChecked && qIdx === state.current && state.checked);
+         (state.answered[qIdx] && state.results[qIdx] !== null) ||
+         (allowCurrentChecked && qIdx === state.current && state.checked && state.answered[qIdx]);
 }
 
 function getReciteInfo(q) {
@@ -1738,8 +1738,10 @@ function setStudyMode(mode) {
   state.studyMode = mode;
   localStorage.setItem('xigai_study_mode', mode);
   updateStudyModeToggle();
+  buildSidebar();
   restoreQuestionState();
-  renderQuestion(state.current);
+  if (state.view === 'main') renderQuestion(state.current);
+  else switchView(state.view);
 }
 
 function setSubjectFilter(subject) {
