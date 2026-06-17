@@ -373,6 +373,7 @@
   }
   .correct-answer-box.show { display: block; }
   .correct-answer-box .label { font-weight: 600; color: var(--success); margin-bottom: 4px; display: block; font-size: 12px; }
+  .answer-note { margin-top: 8px; color: var(--text-muted); font-size: 12px; line-height: 1.6; }
 
   .actions { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 20px; }
   .btn {
@@ -880,7 +881,7 @@ const QUESTIONS = [
   { topic: "人类命运共同体",         question: "构建人类命运共同体的目标是什么？", parts: ["建设", "、", "、", "、", "、", "的世界。"], blanks: ["持久和平", "普遍安全", "共同繁荣", "开放包容", "清洁美丽"], tag: 'csh重点', difficulty: '基础', points: 5 },
   { topic: "全球倡议",               question: "四个全球倡议是什么？",           parts: ["", "、", "、", "、", "。"], blanks: ["全球发展倡议", "全球安全倡议", "全球文明倡议", "全球治理倡议"], tag: 'csh重点', difficulty: '基础', points: 4 },
   { topic: "四个之问",               question: "“四个之问”是什么？",     parts: ["", "、", "、", "、", "。"], blanks: ["中国之问", "世界之问", "人民之问", "时代之问"], tag: 'csh重点', difficulty: '概念', points: 4 },
-  { topic: "跳出历史周期率",         question: "跳出历史周期率的第一个答案是什么？", parts: ["毛主席在“窑洞对”中提出：", "。"], blanks: ["人民监督"], tag: 'csh重点', difficulty: '概念', points: 1 },
+  { topic: "跳出历史周期率",         question: "跳出历史周期率的第一个答案是什么？", parts: ["", ""], blanks: ["人民监督"], note: "毛主席在“窑洞对”中提出。", tag: 'csh重点', difficulty: '概念', points: 1 },
   { topic: "跳出历史周期率",         question: "跳出历史周期率的第二个答案是什么？", parts: ["习近平提出：", "。"], blanks: ["党的自我革命"], tag: 'csh重点', difficulty: '概念', points: 1 },
 
   { topic: "导论：主要内容",         question: "习近平新时代中国特色社会主义思想的主要内容可概括为什么？", parts: ["", "、", "、", "。"], blanks: ["十个明确", "十四个坚持", "十三个方面成就"], tag: '新资料重点', difficulty: '基础', points: 3 },
@@ -1264,6 +1265,11 @@ function escapeHtml(value) {
     '"': '&quot;',
     "'": '&#39;'
   }[ch]));
+}
+
+function renderAnswerHtml(q) {
+  const note = q.note ? `<div class="answer-note">${escapeHtml(q.note)}</div>` : '';
+  return `<div>${escapeHtml(q.answer)}</div>${note}`;
 }
 
 function getQuestionTags(q) {
@@ -1807,7 +1813,7 @@ function renderQuestion(qIdx) {
     el.answerArea.style.display = 'block';
     el.answerArea.innerHTML = `<div class="correct-answer-box show" id="correctAnswerBox">
       <span class="label">参考答案</span>
-      <div>${escapeHtml(q.answer)}</div>
+      ${renderAnswerHtml(q)}
     </div>`;
     el.btnCheck.style.display = 'none';
     el.btnShow.style.display = 'none';
@@ -1881,7 +1887,7 @@ function renderQuestion(qIdx) {
 
     ptsHtml += `<div class="correct-answer-box" id="correctAnswerBox">
       <span class="label">📖 参考答案</span>
-      <div>${escapeHtml(q.answer)}</div>
+      ${renderAnswerHtml(q)}
     </div>`;
 
     el.answerArea.innerHTML = ptsHtml;
@@ -2282,7 +2288,7 @@ function renderList(type) {
     const tagHtml = renderSourceBadges(q) +
                     `<span class="tag-badge tag-difficulty ${recite.cls}" style="margin-bottom:0;margin-top:-4px;">${escapeHtml(recite.label)}</span>` +
                     (mnemonic ? `<span class="tag-badge tag-mnemonic" style="margin-bottom:0;margin-top:-4px;">${escapeHtml(mnemonic)}</span>` : '');
-    html += `<div class="list-item" data-id="${id}"><div class="topic">${escapeHtml(q.topic)}</div><div style="display:flex;gap:4px;flex-wrap:wrap;margin:2px 0 4px;">${tagHtml}</div><div class="q">${escapeHtml(q.question)}</div><div class="a">${escapeHtml(q.answer)}</div><div class="meta">${tags}</div></div>`;
+    html += `<div class="list-item" data-id="${id}"><div class="topic">${escapeHtml(q.topic)}</div><div style="display:flex;gap:4px;flex-wrap:wrap;margin:2px 0 4px;">${tagHtml}</div><div class="q">${escapeHtml(q.question)}</div><div class="a">${renderAnswerHtml(q)}</div><div class="meta">${tags}</div></div>`;
   });
   container.innerHTML = html;
   container.querySelectorAll('.list-item').forEach(item => {
