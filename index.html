@@ -1622,6 +1622,12 @@ function getMnemonic(q, compact = false) {
   return `口诀：${initials}（${parts.join(' / ')}）`;
 }
 
+function canShowMnemonic(qIdx, allowCurrentChecked = false) {
+  return state.studyMode === 'memory' ||
+         state.results[qIdx] !== null ||
+         (allowCurrentChecked && qIdx === state.current && state.checked);
+}
+
 function getReciteInfo(q) {
   const lengths = q.blanks.map(b => String(b).length);
   const total = lengths.reduce((sum, n) => sum + n, 0);
@@ -1701,7 +1707,7 @@ function renderQuestion(qIdx) {
   diffTagEl.className = 'tag-badge tag-difficulty';
   if (recite.cls) diffTagEl.classList.add(recite.cls);
   diffTagEl.style.display = 'inline-block';
-  const mnemonic = getMnemonic(q);
+  const mnemonic = canShowMnemonic(qIdx, true) ? getMnemonic(q) : '';
   if (mnemonic) { mnemonicTag.textContent = mnemonic; mnemonicTag.style.display = 'inline-block'; }
   else { mnemonicTag.style.display = 'none'; }
   el.question.textContent = q.question;
@@ -2155,7 +2161,7 @@ function renderList(type) {
         : '<span class="tag tag-partial">🎯 要点✗</span>';
     }
     const recite = getReciteInfo(q);
-    const mnemonic = getMnemonic(q);
+    const mnemonic = canShowMnemonic(id) ? getMnemonic(q) : '';
     const tagHtml = renderSourceBadges(q) +
                     `<span class="tag-badge tag-difficulty ${recite.cls}" style="margin-bottom:0;margin-top:-4px;">${escapeHtml(recite.label)}</span>` +
                     (mnemonic ? `<span class="tag-badge tag-mnemonic" style="margin-bottom:0;margin-top:-4px;">${escapeHtml(mnemonic)}</span>` : '');
@@ -2416,7 +2422,7 @@ function buildSidebar() {
     items.forEach(({ idx, q }) => {
       const recite = getReciteInfo(q);
       const diffCls = recite.cls ? ` ${recite.cls}` : '';
-      const mnemonic = getMnemonic(q, true);
+      const mnemonic = canShowMnemonic(idx) ? getMnemonic(q, true) : '';
       const tagHtml = renderSourceBadges(q, 'side-tag') +
                       `<span class="tag-badge tag-difficulty side-tag${diffCls}">${escapeHtml(recite.label)}</span>` +
                       (mnemonic ? `<span class="tag-badge tag-mnemonic side-tag side-mnemonic">${escapeHtml(mnemonic)}</span>` : '');
