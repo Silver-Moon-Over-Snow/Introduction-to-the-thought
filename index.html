@@ -247,6 +247,14 @@
     border-radius: var(--radius) 0 0 var(--radius);
     border-right: none;
   }
+  .practice-banner {
+    display: none; align-items: center; justify-content: space-between; gap: 10px;
+    margin-bottom: 16px; padding: 10px 12px;
+    border: 1px solid var(--primary-light); border-radius: var(--radius-xs);
+    background: var(--primary-subtle); color: var(--primary);
+    font-size: 12px; font-weight: 700;
+  }
+  .practice-banner .btn { background: var(--card); padding: 4px 10px; font-size: 11px; color: var(--primary); border-color: var(--primary-light); }
   .comment-panel {
     width: 270px; min-width: 270px;
     background: var(--card);
@@ -384,6 +392,7 @@
   .btn-primary::after, .btn-success::after, .btn-danger::after { background: #fff; opacity: .5; }
   .btn:hover { transform: translateY(-1px); }
   .btn:active { transform: scale(.97); }
+  .btn:disabled { opacity: .45; cursor: not-allowed; transform: none !important; }
   .btn-sm { padding: 4px 10px; font-size: 11px; }
   .btn-primary { background: var(--primary); color: #fff; border-color: var(--primary); }
   .btn-primary:hover { background: var(--primary-hover); }
@@ -410,6 +419,11 @@
   .list-view.active { display: block; }
   .card-main { display: block; }
   .card-main.hidden { display: none; }
+  .list-title-row {
+    display: flex; justify-content: space-between; align-items: center; gap: 10px;
+    margin-bottom: 14px; flex-wrap: wrap;
+  }
+  .list-actions { display: flex; gap: 8px; flex-wrap: wrap; }
 
   .list-item {
     background: var(--card); border: 1px solid var(--border); border-radius: 10px;
@@ -508,6 +522,7 @@
     .tag-badge.side-mnemonic { display: block; font-size: 9px; padding: 2px 6px; }
     .card-main-content .card { border-radius: var(--radius); border-right: 1px solid var(--border); }
     .card-row { display: block; }
+    .practice-banner { align-items: flex-start; }
     .comment-panel {
       display: block;
       width: 100%; min-width: 0;
@@ -604,6 +619,8 @@
   [data-theme="dark"] .tag-partial { background: #422006; color: #fde68a; }
   [data-theme="dark"] .stat.active { background: var(--primary-subtle); }
   [data-theme="dark"] .stat:hover { border-color: var(--primary); }
+  [data-theme="dark"] .practice-banner { background: var(--primary-subtle); border-color: #1e3a5f; color: #93c5fd; }
+  [data-theme="dark"] .practice-banner .btn { background: #0b1120; color: #93c5fd; border-color: #1e3a5f; }
   [data-theme="dark"] .nav-row .qid-badge { background: #0b1120; }
   [data-theme="dark"] .comment-panel { background: var(--card); }
   [data-theme="dark"] .comment-panel::before { background: var(--primary-light); }
@@ -695,6 +712,11 @@
       <div class="card-row">
         <div class="card-main-content">
           <div class="card">
+
+        <div class="practice-banner" id="practiceBanner">
+          <span id="practiceText">专项刷题</span>
+          <button class="btn btn-sm" id="exitPractice" type="button">退出专项</button>
+        </div>
 
         <!-- Progress -->
         <div class="progress-wrap">
@@ -790,16 +812,22 @@
     </div><!-- end card-main -->
     
     <div class="list-view" id="viewWrong">
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;">
+      <div class="list-title-row">
         <h2 style="font-size:18px;">❌ 错题本</h2>
-        <button class="btn btn-sm btn-danger" id="clearWrong">清空错题</button>
+        <div class="list-actions">
+          <button class="btn btn-sm btn-primary" id="startWrong" type="button">▶ 开刷错题</button>
+          <button class="btn btn-sm btn-danger" id="clearWrong">清空错题</button>
+        </div>
       </div>
       <div id="wrongList"></div>
     </div>
     <div class="list-view" id="viewFav">
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;">
+      <div class="list-title-row">
         <h2 style="font-size:18px;">⭐ 收藏本</h2>
-        <button class="btn btn-sm btn-danger" id="clearFav">清空收藏</button>
+        <div class="list-actions">
+          <button class="btn btn-sm btn-primary" id="startFav" type="button">▶ 开刷收藏</button>
+          <button class="btn btn-sm btn-danger" id="clearFav">清空收藏</button>
+        </div>
       </div>
       <div id="favList"></div>
     </div>
@@ -1120,6 +1148,8 @@ const state = {
   userInputs: loadObj('xigai_texts'),  // { qIdx: user typed string }
   comments: loadObj('xigai_comments'),  // { qIdx: comment text }
   view: 'main',
+  practiceMode: 'all',
+  practiceIds: [],
   subjectFilter: localStorage.getItem('xigai_subject_filter') || '习概',
   sourceFilter: localStorage.getItem('xigai_source_filter') || 'all',
   studyMode: localStorage.getItem('xigai_study_mode') || 'dictation'
@@ -1166,6 +1196,8 @@ const el = {
   step1: $('step1'), step2: $('step2'), step3: $('step3'),
   subjectXigai: $('subjectXigai'), subjectShigang: $('subjectShigang'), appTitle: $('appTitle'), appSubtitle: $('appSubtitle'),
   stepIndicator: $('stepIndicator'), modeMemory: $('modeMemory'), modeDictation: $('modeDictation'),
+  startWrong: $('startWrong'), startFav: $('startFav'), exitPractice: $('exitPractice'),
+  practiceBanner: $('practiceBanner'), practiceText: $('practiceText'),
   utilitySummary: $('utilitySummary'), btnExport: $('btnExport'), btnImport: $('btnImport'), importFile: $('importFile'),
 };
 
@@ -1266,8 +1298,31 @@ function questionVisibleInFilters(idx, filter = state.sourceFilter, subject = st
   return subjectMatches(idx, subject) && (filter === 'all' || getQuestionTags(QUESTIONS[idx]).includes(filter));
 }
 
+function getPracticeLabel(mode = state.practiceMode) {
+  if (mode === 'wrong') return '错题专项';
+  if (mode === 'fav') return '收藏专项';
+  return '全部题目';
+}
+
+function practiceMatches(idx, mode = state.practiceMode) {
+  if (mode === 'all') return true;
+  if (Array.isArray(state.practiceIds) && state.practiceIds.length) return state.practiceIds.includes(idx);
+  if (mode === 'wrong') return state.wrongIds.has(idx);
+  if (mode === 'fav') return state.favorites.has(idx);
+  return true;
+}
+
+function getPracticeCollectionIds(mode, filter = state.sourceFilter) {
+  return QUESTIONS
+    .map((_, i) => i)
+    .filter(i => !state.dismissedIds.has(i) && questionVisibleInFilters(i, filter))
+    .filter(i => mode === 'wrong' ? state.wrongIds.has(i) : state.favorites.has(i));
+}
+
 function getSourceTags() {
-  return [...new Set(QUESTIONS.filter((q, i) => subjectMatches(i)).flatMap(getQuestionTags))];
+  return [...new Set(QUESTIONS
+    .filter((q, i) => subjectMatches(i) && practiceMatches(i))
+    .flatMap(getQuestionTags))];
 }
 
 if (state.sourceFilter !== 'all' && !getSourceTags().includes(state.sourceFilter)) {
@@ -1281,11 +1336,13 @@ function sourceMatches(idx, filter = state.sourceFilter) {
 function activeQuestionIds(filter = state.sourceFilter) {
   return QUESTIONS
     .map((_, i) => i)
-    .filter(i => !state.dismissedIds.has(i) && questionVisibleInFilters(i, filter));
+    .filter(i => !state.dismissedIds.has(i) && questionVisibleInFilters(i, filter) && practiceMatches(i));
 }
 
 function allVisibleQuestionIds(filter = state.sourceFilter) {
-  return QUESTIONS.map((_, i) => i).filter(i => questionVisibleInFilters(i, filter));
+  return QUESTIONS.map((_, i) => i)
+    .filter(i => questionVisibleInFilters(i, filter) && practiceMatches(i))
+    .filter(i => state.practiceMode === 'all' || !state.dismissedIds.has(i));
 }
 
 function updateSaveSummary() {
@@ -1660,6 +1717,16 @@ function updateSubjectUI() {
   document.title = state.subjectFilter === '史纲' ? '史纲 · 刷题' : '习概 · 刷题';
 }
 
+function updatePracticeUI() {
+  const isPractice = state.practiceMode !== 'all';
+  if (el.practiceBanner) el.practiceBanner.style.display = isPractice ? 'flex' : 'none';
+  if (el.practiceText) {
+    const count = activeQuestionIds().length;
+    const source = state.sourceFilter === 'all' ? '' : ` · ${state.sourceFilter}`;
+    el.practiceText.textContent = `${getPracticeLabel()}${source} · ${count} 题`;
+  }
+}
+
 function setStudyMode(mode) {
   if (mode !== 'memory' && mode !== 'dictation') return;
   state.studyMode = mode;
@@ -1672,6 +1739,7 @@ function setStudyMode(mode) {
 function setSubjectFilter(subject) {
   if (!getSubjectNames().includes(subject)) return;
   state.subjectFilter = subject;
+  resetPracticeMode(false);
   localStorage.setItem('xigai_subject_filter', subject);
   if (state.sourceFilter !== 'all' && !getSourceTags().includes(state.sourceFilter)) {
     state.sourceFilter = 'all';
@@ -1693,6 +1761,7 @@ function renderQuestion(qIdx) {
   const isMemoryMode = state.studyMode === 'memory';
   updateStudyModeToggle();
   updateSubjectUI();
+  updatePracticeUI();
 
   el.topic.textContent = q.topic;
   // Update tags
@@ -1877,8 +1946,12 @@ function renderQuestion(qIdx) {
   const visiblePosition = visibleIds.indexOf(qIdx);
   const shownPosition = visiblePosition >= 0 ? visiblePosition + 1 : qIdx + 1;
   const activeCount = activeQuestionIds().length;
-  const sourceLabel = state.sourceFilter === 'all' ? '' : `${state.sourceFilter} · `;
-  el.progressText.textContent = `${sourceLabel}${shownPosition} / ${total}`;
+  const sourceLabel = [
+    state.practiceMode !== 'all' ? getPracticeLabel() : '',
+    state.sourceFilter !== 'all' ? state.sourceFilter : ''
+  ].filter(Boolean).join(' · ');
+  const progressPrefix = sourceLabel ? `${sourceLabel} · ` : '';
+  el.progressText.textContent = `${progressPrefix}${shownPosition} / ${total}`;
   el.progressFill.style.width = `${(shownPosition / total) * 100}%`;
   el.qid.textContent = `#${qIdx + 1}`;
 
@@ -1922,6 +1995,48 @@ function updateStats() {
 }
 
 // ========== ACTIONS ==========
+function resetPracticeMode(render = true) {
+  state.practiceMode = 'all';
+  state.practiceIds = [];
+  if (render) {
+    buildSidebar();
+    updatePracticeUI();
+    updateStats();
+  }
+}
+
+function startPractice(mode) {
+  if (mode !== 'wrong' && mode !== 'fav') return;
+  const ids = getPracticeCollectionIds(mode);
+  if (!ids.length) {
+    const label = mode === 'wrong' ? '错题' : '收藏题';
+    const suffix = state.sourceFilter === 'all' ? '' : `（当前来源：${state.sourceFilter}）`;
+    alert(`当前没有可刷的${label}${suffix}。`);
+    return;
+  }
+  state.practiceMode = mode;
+  state.practiceIds = ids;
+  if (!ids.includes(state.current)) state.current = ids[0];
+  restoreQuestionState();
+  buildSidebar();
+  switchView('main');
+  updatePracticeUI();
+  updateStats();
+}
+
+function exitPractice() {
+  resetPracticeMode(false);
+  const ids = activeQuestionIds();
+  if (ids.length && (!ids.includes(state.current) || state.dismissedIds.has(state.current))) {
+    state.current = ids[0];
+  }
+  restoreQuestionState();
+  buildSidebar();
+  switchView(ids.length ? 'main' : 'dismissed');
+  updatePracticeUI();
+  updateStats();
+}
+
 function confirmPoints() {
   if (state.checked) return;
   const qIdx = state.current;
@@ -2136,6 +2251,8 @@ function renderList(type) {
   else { ids = QUESTIONS.map((_, i) => i).filter(i => state.answered[i]); container = el.doneList; emptyMsg = '📝 还没有答过题'; }
   ids = ids.filter(id => sourceMatches(id));
   if (state.sourceFilter !== 'all') emptyMsg = `${state.sourceFilter}：${emptyMsg}`;
+  if (type === 'wrong' && el.startWrong) el.startWrong.disabled = ids.length === 0;
+  if (type === 'fav' && el.startFav) el.startFav.disabled = ids.length === 0;
 
   if (ids.length === 0) {
     container.innerHTML = `<div class="empty-state"><div class="empty-cloud"></div><div class="icon">📭</div><p>${emptyMsg}</p></div>`;
@@ -2176,6 +2293,10 @@ function renderList(type) {
         localStorage.setItem('xigai_source_filter', state.sourceFilter);
         buildSidebar();
       }
+      if (state.practiceMode !== 'all' && !practiceMatches(id)) {
+        resetPracticeMode(false);
+        buildSidebar();
+      }
       state.current = id;
       restoreQuestionState();
       switchView('main');
@@ -2195,6 +2316,9 @@ el.btnShow.addEventListener('click', showAnswer);
 el.btnClear.addEventListener('click', clearAnswer);
 el.btnFav.addEventListener('click', toggleFav);
 el.btnDim.addEventListener('click', dismissQuestion);
+el.startWrong?.addEventListener('click', () => startPractice('wrong'));
+el.startFav?.addEventListener('click', () => startPractice('fav'));
+el.exitPractice?.addEventListener('click', exitPractice);
 el.btnExport.addEventListener('click', exportProgress);
 el.btnImport.addEventListener('click', () => el.importFile.click());
 el.importFile.addEventListener('change', e => {
@@ -2321,18 +2445,24 @@ el.clearWrong.addEventListener('click', () => {
     const ids = [...state.wrongIds];
     state.wrongIds.clear();
     ids.forEach(id => { state.results[id] = null; state.answered[id] = false; });
+    if (state.practiceMode === 'wrong') resetPracticeMode(false);
     saveState();
+    buildSidebar();
     renderList('wrong');
     updateStats();
+    updatePracticeUI();
   }
 });
 
 el.clearFav.addEventListener('click', () => {
   if (confirm('确定清空所有收藏？')) {
     state.favorites.clear();
+    if (state.practiceMode === 'fav') resetPracticeMode(false);
     saveState();
+    buildSidebar();
     renderList('fav');
     updateStats();
+    updatePracticeUI();
   }
 });
 
@@ -2385,6 +2515,7 @@ function setSourceFilter(filter) {
     switchView('dismissed');
     updateStats();
     updateSaveSummary();
+    updatePracticeUI();
   }
 }
 
@@ -2413,6 +2544,7 @@ function buildSidebar() {
   QUESTIONS.forEach((q, i) => {
     if (state.dismissedIds.has(i)) return; // skip dismissed
     if (!sourceMatches(i)) return;
+    if (!practiceMatches(i)) return;
     if (!groups[q.topic]) groups[q.topic] = [];
     groups[q.topic].push({ idx: i, q });
   });
@@ -2430,9 +2562,10 @@ function buildSidebar() {
     });
     html += '</div>';
   }
+  const modeText = state.practiceMode === 'all' ? '' : `${getPracticeLabel()}中`;
   const emptyText = state.sourceFilter === 'all'
-    ? '所有题目都已被斩，恢复后可继续刷题'
-    : `“${escapeHtml(state.sourceFilter)}” 下没有可刷题目`;
+    ? `${modeText || '所有题目'}没有可刷题目`
+    : `${modeText}“${escapeHtml(state.sourceFilter)}” 下没有可刷题目`;
   container.innerHTML = html || `<div class="source-filter-empty">${emptyText}</div>`;
   container.querySelectorAll('.side-item').forEach(item => {
     item.addEventListener('click', () => {
