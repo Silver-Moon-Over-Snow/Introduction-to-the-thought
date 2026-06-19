@@ -1272,6 +1272,19 @@ function renderAnswerHtml(q) {
   return `<div>${escapeHtml(q.answer)}</div>${note}`;
 }
 
+function getAnswerPoints(q) {
+  const blanks = Array.isArray(q.blanks) ? q.blanks : [];
+  const pointCount = q.points || blanks.length;
+  if (blanks.length === 1 && pointCount > 1) {
+    const splitPoints = String(blanks[0] || q.answer || '')
+      .split(/[；;]/)
+      .map(s => s.trim().replace(/[。.]$/, ''))
+      .filter(Boolean);
+    if (splitPoints.length > 1) return splitPoints;
+  }
+  return blanks;
+}
+
 function getQuestionTags(q) {
   const raw = q.tags || q.tag || [];
   const list = Array.isArray(raw) ? raw : String(raw).split(/[,，/、|]/);
@@ -1844,6 +1857,7 @@ function renderQuestion(qIdx) {
     el.answerArea.style.display = 'block';
 
     // Phase 2/3: individual textareas per point
+    const answerPoints = getAnswerPoints(q);
     const savedArray = Array.isArray(state.userInputs[qIdx]) ? state.userInputs[qIdx] : [];
     let allDisabled = false;
     let globalCls = '';
@@ -1858,27 +1872,27 @@ function renderQuestion(qIdx) {
 
     // Build individual point inputs
     let ptsHtml = '<div class="points-list">';
-    for (let i = 0; i < q.blanks.length; i++) {
+    for (let i = 0; i < answerPoints.length; i++) {
       let val = savedArray[i] !== undefined ? savedArray[i] : '';
       let cls = '';
       if (state.checked && state.results[qIdx] !== null) {
         // Show user's original input with correct/wrong styling
-        const userVals = savedArray.slice(0, q.blanks.length);
-        if (q.blanks.length === 1) {
+        const userVals = savedArray.slice(0, answerPoints.length);
+        if (answerPoints.length === 1) {
           // Single point: fuzzy match against full answer
           cls = fuzzyMatch(userVals[0] || '', q.answer) ? 'correct' : 'wrong';
           val = userVals[0] || '';
         } else {
           // Multi point: order-independent blank matching
-          const { matched } = matchAnswers(userVals, q.blanks.map(b => b.trim()));
+          const { matched } = matchAnswers(userVals, answerPoints.map(b => b.trim()));
           cls = matched[i] ? 'correct' : 'wrong';
           val = userVals[i] || '';
         }
       } else if (state.checked) {
         cls = 'reveal';
-        val = q.blanks[i];
+        val = answerPoints[i];
       }
-      const isSingle = q.blanks.length === 1;
+      const isSingle = answerPoints.length === 1;
       if (isSingle) {
         ptsHtml += `<div class="point-item"><textarea id="pointInput_${i}" class="${cls}" ${allDisabled ? 'disabled' : ''}" placeholder="在此输入答案…" style="min-height:60px;">${escapeHtml(val)}</textarea></div>`;
       } else {
@@ -2076,9 +2090,10 @@ function checkAnswer() {
   if (state.checked) return;
   const qIdx = state.current;
   const q = QUESTIONS[qIdx];
+  const answerPoints = getAnswerPoints(q);
   const userVals = [];
   let empty = true;
-  for (let i = 0; i < q.blanks.length; i++) {
+  for (let i = 0; i < answerPoints.length; i++) {
     const ta = document.getElementById('pointInput_' + i);
     const v = ta ? ta.value.trim() : '';
     userVals.push(v);
@@ -2087,12 +2102,12 @@ function checkAnswer() {
   if (empty) return;
   state.userInputs[qIdx] = userVals;
   let allCorrect;
-  if (q.blanks.length === 1) {
+  if (answerPoints.length === 1) {
     // Single point: compare full user answer against complete answer (fuzzy)
     allCorrect = fuzzyMatch(userVals[0], q.answer);
   } else {
     // Multi point: order-independent blank matching
-    const { allCorrect: ac } = matchAnswers(userVals, q.blanks.map(b => b.trim()));
+    const { allCorrect: ac } = matchAnswers(userVals, answerPoints.map(b => b.trim()));
     allCorrect = ac;
   }
   state.checked = true;
@@ -2108,8 +2123,9 @@ function showAnswer() {
   if (state.checked) return;
   const qIdx = state.current;
   const q = QUESTIONS[qIdx];
+  const answerPoints = getAnswerPoints(q);
   const userVals = [];
-  for (let i = 0; i < q.blanks.length; i++) {
+  for (let i = 0; i < answerPoints.length; i++) {
     const ta = document.getElementById('pointInput_' + i);
     userVals.push(ta ? ta.value.trim() : '');
   }
