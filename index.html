@@ -474,6 +474,10 @@
   }
   .empty-state .icon { font-size: 40px; margin-bottom: 12px; opacity: .35; display: block; }
   .empty-state p { font-size: 15px; }
+  .sidebar::before,
+  .empty-state .empty-cloud {
+    display: none;
+  }
 
   .nav-row {
     display: flex; justify-content: space-between; align-items: center;
@@ -2281,7 +2285,7 @@ function renderList(type) {
   if (type === 'fav' && el.startFav) el.startFav.disabled = ids.length === 0;
 
   if (ids.length === 0) {
-    container.innerHTML = `<div class="empty-state"><div class="empty-cloud"></div><div class="icon">📭</div><p>${emptyMsg}</p></div>`;
+    container.innerHTML = `<div class="empty-state"><div class="icon">📭</div><p>${emptyMsg}</p></div>`;
     return;
   }
 
